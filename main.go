@@ -1,15 +1,15 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
-	"log"
 	"midi-go/bean"
 	"midi-go/controler"
 	"midi-go/middleware"
 	"net/http"
-	"os"
 	"os/exec"
 	"path"
 )
@@ -19,7 +19,7 @@ func main() {
 	r.Use(middleware.CorsHandler())
 	h5(r)
 	restfulApi(r)
-	r.Run("192.168.1.12:8093")
+	r.Run("192.168.11.122:8093")
 }
 
 func restfulApi(r *gin.Engine) {
@@ -27,6 +27,7 @@ func restfulApi(r *gin.Engine) {
 	{
 		api.POST(controler.ProtocolUpload, HandleUploadFile)
 		api.POST(controler.ProtocolDownload, HandleDownloadFile)
+		api.POST(controler.ProtocolAutoDeploy, HandleAutoDeploy)
 	}
 }
 
@@ -38,6 +39,7 @@ func h5(r *gin.Engine) {
 		h5.Static("static/js", "template/dist/static/js")
 		h5.StaticFile("favicon.ico", "template/dist/favicon.ico")
 		h5.StaticFile("score.zip", "score.zip")
+		h5.StaticFile("index_bk.xml", "index_src.xml")
 		r.LoadHTMLFiles("template/dist/index.html")
 	}
 
@@ -51,8 +53,8 @@ func HandleUploadFile(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusOK, gin.H{
-			"code": 400,
-			"msg":  "文件上传失败"})
+			"code":    400,
+			"message": "文件上传失败"})
 		return
 	}
 	defer file.Close()
@@ -60,30 +62,35 @@ func HandleUploadFile(c *gin.Context) {
 	filename := header.Filename
 	fileSuffix := path.Ext(filename)
 	fmt.Println(filename, fileSuffix)
-	if fileSuffix == ".xml" {
-		filename = "music.xml"
-	} else if fileSuffix == ".mid" {
-		filename = "score.mid"
+	if fileSuffix != ".zip" {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "文件类型不是zip"})
+		return
 	}
 
-	out, err := os.Create(filename)
+	buf := new(bytes.Buffer)
+	filesSize, err := io.Copy(buf, file)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-
-	defer out.Close()
-	_, err = io.Copy(out, file)
-	if err != nil {
-		log.Fatal(err)
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), filesSize)
+	zipResBean := controler.UnzipFile(zr)
+	if zipResBean.DirIndex > 0 {
+		_fileSuffix := path.Ext(filename)
+		name := filename[0 : len(filename)-len(_fileSuffix)]
+		c.JSON(http.StatusOK, gin.H{
+			"code": 200,
+			"data": gin.H{
+				"resId":  fmt.Sprintf("%d", zipResBean.DirIndex),
+				"resUrl": name,
+			},
+			"message": "上传文件成功"})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": "文件解压失败"})
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 200,
-		"data": gin.H{
-			"resId":  "",
-			"resUrl": filename,
-		},
-		"msg": "上传文件成功"})
 
 }
 
@@ -121,4 +128,28 @@ func HandleDownloadFile(c *gin.Context) {
 			"msg": ""})
 	}
 
+}
+
+func HandleAutoDeploy(c *gin.Context) {
+	var b bean.AutoDeployBean
+	c.BindJSON(&b)
+	fmt.Println(b.Content)
+	bean := controler.ParseAutoDeploy(b)
+
+	if !bean.Success {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    500,
+			"message": "部署失败",
+			"data": gin.H{
+				"res": "success",
+			},
+			"msg": ""})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"data": gin.H{
+			"res": bean.ResUrl,
+		},
+		"msg": ""})
 }
