@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
-	"midi-go/bean"
-	"midi-go/controler"
-	"midi-go/middleware"
+	"main_web/bean"
+	"main_web/controler"
+	"main_web/middleware"
 	"net/http"
 	"os/exec"
 	"path"
@@ -19,11 +19,11 @@ func main() {
 	r.Use(middleware.CorsHandler())
 	h5(r)
 	restfulApi(r)
-	r.Run("192.168.11.122:8093")
+	r.Run(":80")
 }
 
 func restfulApi(r *gin.Engine) {
-	api := r.Group("/api")
+	api := r.Group("/auto_deploy_api")
 	{
 		api.POST(controler.ProtocolUpload, HandleUploadFile)
 		api.POST(controler.ProtocolDownload, HandleDownloadFile)
@@ -32,18 +32,21 @@ func restfulApi(r *gin.Engine) {
 }
 
 func h5(r *gin.Engine) {
-	h5 := r.Group("/")
+	h5 := r.Group("/auto_deploy")
 	{
-		h5.Static("static/css", "template/dist/static/css")
-		h5.Static("static/fonts", "template/dist/static/fonts")
-		h5.Static("static/js", "template/dist/static/js")
-		h5.StaticFile("favicon.ico", "template/dist/favicon.ico")
-		h5.StaticFile("score.zip", "score.zip")
-		h5.StaticFile("index_bk.xml", "index_src.xml")
-		r.LoadHTMLFiles("template/dist/index.html")
-	}
+		h5.StaticFS("static", http.Dir("template/dist/static"))
 
-	r.GET("/", func(c *gin.Context) {
+		//h5.Static("static/css", "template/dist/static/css")
+		//h5.Static("static/fonts", "template/dist/static/fonts")
+		//h5.Static("static/js", "template/dist/static/js")
+		h5.StaticFile("favicon.ico", "template/dist/favicon.ico")
+		h5.StaticFile("index.html", "template/dist/index.html")
+		//h5.StaticFile("score.zip", "score.zip")
+		h5.StaticFile("index_src.xml", "index_src.xml")
+
+	}
+	r.LoadHTMLFiles("template/dist/index.html")
+	r.GET("/auto_deploy", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 }

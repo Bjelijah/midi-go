@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"midi-go/bean"
+	"main_web/bean"
 	"os"
 	path2 "path"
 	"path/filepath"
@@ -20,8 +20,8 @@ const (
 	ProtocolUpload     = "tools/file/upload"
 	ProtocolDownload   = "tools/file/download"
 	ProtocolAutoDeploy = "tools/autoDeploy"
-	//FileSystemRoot     = "C:\\work\\web\\edith\\activity\\Hot_sweat_season"
-	FileSystemRoot = "C:\\Users\\mobi\\Desktop\\tmp\\Hot_sweat_season"
+	FileSystemRoot     = "/data/edith/activity/Hot_sweat_season"
+	//FileSystemRoot = "C:/Users/mobi/Desktop/tmp/Hot_sweat_season"
 )
 
 func UnzipFile(zr *zip.Reader) bean.ZipImgBean {
@@ -29,7 +29,7 @@ func UnzipFile(zr *zip.Reader) bean.ZipImgBean {
 		DirIndex: -1,
 		ImgSize:  0,
 	}
-	files, _ := ioutil.ReadDir(FileSystemRoot + "\\" + "img")
+	files, _ := ioutil.ReadDir(FileSystemRoot + "/" + "img")
 	maxTmpDir := 0
 	for _, dir := range files {
 		if dir.IsDir() {
@@ -44,7 +44,7 @@ func UnzipFile(zr *zip.Reader) bean.ZipImgBean {
 	}
 	maxTmpDir += 1
 	fmt.Printf("next new dir =%d\n", maxTmpDir)
-	dst := FileSystemRoot + "\\" + "img" + "\\" + fmt.Sprintf("%d", maxTmpDir)
+	dst := FileSystemRoot + "/" + "img" + "/" + fmt.Sprintf("%d", maxTmpDir)
 	os.MkdirAll(dst, os.ModePerm)
 	tmpFileNum := 0
 	tmpFileList := list.New()
@@ -101,7 +101,7 @@ func ParseAutoDeploy(b bean.AutoDeployBean) bean.DeployResBean {
 
 	dstHtmlFileName := fmt.Sprintf("%s_%s.html", projectIndex, name)
 
-	files, _ := ioutil.ReadDir(FileSystemRoot + "\\" + "img" + "\\" + projectIndex)
+	files, _ := ioutil.ReadDir(FileSystemRoot + "/" + "img" + "/" + projectIndex)
 
 	var fileList []string
 	for _, file := range files {
@@ -113,21 +113,13 @@ func ParseAutoDeploy(b bean.AutoDeployBean) bean.DeployResBean {
 	sort.Strings(fileList)
 	imgSize := len(fileList)
 
-	input, err := ioutil.ReadFile("index_src.html")
-	if err != nil {
-		return res
-	}
-	err = ioutil.WriteFile("index_bk.html", input, 0644)
-	if err != nil {
-		return res
-	}
 	in, err := os.Open("index_src.html")
 	if err != nil {
 		return res
 	}
 	defer in.Close()
 
-	out, err := os.OpenFile(FileSystemRoot+"\\"+dstHtmlFileName, os.O_RDWR|os.O_CREATE, 0766)
+	out, err := os.OpenFile(FileSystemRoot+"/"+dstHtmlFileName, os.O_RDWR|os.O_CREATE, 0766)
 	if err != nil {
 		return res
 	}
@@ -172,7 +164,7 @@ func ParseAutoDeploy(b bean.AutoDeployBean) bean.DeployResBean {
 		}
 	}
 	res.Success = true
-	res.ResUrl = FileSystemRoot + "\\" + dstHtmlFileName
+	res.ResUrl = "https://api.mobifitness.cn/edith/activity/Hot_sweat_season/" + dstHtmlFileName
 
 	return res
 }

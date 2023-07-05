@@ -1,6 +1,6 @@
-module midi-go
+module main_web
 
-go 1.21rc2
+go 1.20
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect
