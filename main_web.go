@@ -19,7 +19,7 @@ func main() {
 	r.Use(middleware.CorsHandler())
 	h5(r)
 	restfulApi(r)
-	r.Run(":80")
+	r.Run(":8093")
 }
 
 func restfulApi(r *gin.Engine) {
@@ -41,11 +41,13 @@ func h5(r *gin.Engine) {
 		//h5.Static("static/js", "template/dist/static/js")
 		h5.StaticFile("favicon.ico", "template/dist/favicon.ico")
 		h5.StaticFile("index.html", "template/dist/index.html")
-		//h5.StaticFile("score.zip", "score.zip")
 		h5.StaticFile("index_src.xml", "index_src.xml")
 
 	}
 	r.LoadHTMLFiles("template/dist/index.html")
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
+	})
 	r.GET("/auto_deploy", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
